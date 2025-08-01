@@ -1,0 +1,5 @@
+{
+    "ext": "js json hbs scss",
+    "watch": ["src", "routes", "views"],
+    "ignore": ["public/*", "public/js/*"]
+}
