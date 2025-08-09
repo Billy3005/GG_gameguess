@@ -318,3 +318,101 @@ section {
   background-color: #e1f0ff;
   color: #333;
 }
+
+//Drawing board
+.drawing-board {
+    flex: 1;
+    display: flex;
+    max-width: 700px;
+}
+
+.drawing-board__wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+    border-radius: 10px;
+    background: rgb(243, 175, 80)
+}
+
+.drawing-board__choice {
+    background: white;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    position: relative;
+}
+
+.drawing-board__canvas {
+    flex: 1;
+    display: flex;
+    background: white;
+    padding: 20px;
+    flex-direction: column;
+}
+
+.drawing-board__gif {
+  width: 250px;
+  max-height:350px;
+  object-fit: contain;
+  margin: 15px 0;
+}
+
+.drawing-board__title {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      text-align: center;
+      font-family: quicksand, sans-serif;
+    }
+
+.drawing-board__username {
+      font-size: 30px;
+      font-weight: bold;
+      font-family: 'Times New Roman', Times, serif;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .drawing-board__options {
+      display: flex;
+      width: 80%;
+      justify-content: space-around;
+      margin-top: 10px;
+    }
+
+    .drawing-board__button {
+      padding: 10px 20px;
+      width: 150px;
+      text-align: center;
+      height: 40px;
+      background-color: rgb(161, 251, 248);
+      border: none;
+      border-radius: 12px;  
+      font-weight: bold;
+      color: rgb(179, 0, 39);
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .drawing-board__progress {
+      height: 10px;
+      margin-top: 150px;
+      background-color: #ccc;
+      width: 95%;
+      margin: auto;
+      border-radius:20px;
+      overflow: hidden;
+    }
+
+.drawing-board__progress-fill {
+    height: 100%;
+    background-color: red;
+    width: 100%;
+    transition: width linear;
+}
