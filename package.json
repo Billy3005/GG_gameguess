@@ -5,6 +5,8 @@
   "scripts": {
     "start": "nodemon src/index.js",
     "watch": "sass --watch src/resources/scss/app.scss --no-source-map --style=compressed src/public/css/app.css",
+    "watch2": "sass --watch src/resources/scss/home.scss --no-source-map --style=compressed src/public/css/home.css",
+
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -19,6 +21,7 @@
     "express": "^5.1.0",
     "express-handlebars": "^8.0.3",
     "mysql2": "^3.14.3",
+    "sequelize": "^6.37.7",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1"
   },

@@ -8,6 +8,13 @@ const canvas = document.querySelector('canvas'),
   saveImg = document.querySelector('.save-img'),
   ctx = canvas.getContext('2d');
 
+function showCanvasWaiting() {
+  document.getElementById('drawing-board__canvas').style.display = 'block';
+  if (!isDrawing) {
+    document.querySelector('.drawing-board__progress').style.display = 'none';
+  }
+}
+
 // global variables with default value
 let prevMouseX,
   prevMouseY,
@@ -134,8 +141,7 @@ colorPicker.addEventListener('change', () => {
 });
 
 clearCanvas.addEventListener('click', () => {
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // clearing whole canvas
-  setCanvasBackground();
+  socket.emit('clearImg');
 });
 
 saveImg.addEventListener('click', () => {
@@ -164,12 +170,30 @@ chatInput.addEventListener('keypress', (e) => {
 socket.on('guess', (data) => {
   const div = document.createElement('div');
   div.classList.add('guess'); // class để định dạng CSS
-  div.textContent = `👤 ${data.userId.slice(0, 5)}: ${data.guess}`; // Cắt gọn ID cho đẹp
+  div.textContent = `👤 ${data.username}: ${data.guess}`; // Cắt gọn ID cho đẹp
   chatBody.appendChild(div);
   chatBody.scrollTop = chatBody.scrollHeight; // Tự cuộn xuống dòng mới
 });
 
+// ========== HÀM CẬP NHẬT TÊN NGƯỜI VẼ ==========
+function updateCurrentDrawerName(drawerName) {
+  const usernameElements = document.querySelectorAll(
+    '.drawing-board__username'
+  );
+  usernameElements.forEach((element) => {
+    element.textContent = drawerName || 'Đang chờ...';
+  });
+  console.log('Updated drawer name to:', drawerName);
+}
+
+let currentDrawerName = 'Đang chờ...';
+
 //Socket IO
+
+socket.on('clear', () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  setCanvasBackground();
+});
 
 socket.on('drawing', (data) => {
   if (
@@ -216,7 +240,7 @@ socket.on('init', (data) => {
   data.guessHistory.forEach((g) => {
     const div = document.createElement('div');
     div.classList.add('guess');
-    div.textContent = `👤 ${g.userId.slice(0, 5)}: ${g.guess}`;
+    div.textContent = `👤 ${g.username}: ${g.guess}`;
     chatBody.appendChild(div);
   });
 
@@ -231,6 +255,7 @@ socket.on('startGame', () => {
 
 // Khi chưa đủ người
 socket.on('waiting', (playerCount) => {
+  showCanvasWaiting();
   alert(`Waiting for other players`);
 });
 
@@ -256,13 +281,18 @@ socket.on('otherPlayerDrawing', () => {
 });
 
 socket.on('startRound', () => {
+  document.querySelector('.drawing-board__progress').style.display = 'block';
   setProgressBar(45, 'drawing-board__canvas-fill', () => {
-    socket.emit('timeUp'); // Chỉ thông báo cho server
+    setTimeout(() => {
+      socket.emit('timeUp');
+    }, 3000);
   });
 });
 
 //Role
 socket.on('role', (role) => {
+  console.log('Received role:', role);
+
   if (role === 'drawer') {
     isDrawer = true;
     canGuess = false;
@@ -279,6 +309,25 @@ socket.on('role', (role) => {
     // Ẩn tất cả UI chọn vẽ, chỉ để canvas đoán
     document.getElementById('drawing-board__choice').style.display = 'none';
     document.getElementById('drawing-board__canvas').style.display = 'block';
+
+    // KHÔNG cập nhật tên ở đây nữa vì không phải là drawer
+  }
+});
+
+// ========== LẮNG NGHE CẬP NHẬT THÔNG TIN NGƯỜI VẼ ==========
+// Lắng nghe sự kiện cập nhật thông tin người vẽ hiện tại
+socket.on('updateCurrentDrawer', (drawerInfo) => {
+  console.log('Updating current drawer to:', drawerInfo.name);
+  currentDrawerName = drawerInfo.name;
+  updateCurrentDrawerName(drawerInfo.name);
+});
+
+// Cập nhật khi game bắt đầu turn mới
+socket.on('newTurnStarted', (gameState) => {
+  console.log('New turn started, drawer:', gameState.currentDrawer);
+  if (gameState.currentDrawer) {
+    currentDrawerName = gameState.currentDrawer.name;
+    updateCurrentDrawerName(gameState.currentDrawer.name);
   }
 });
 
@@ -300,7 +349,11 @@ function chooseWord(word) {
   document.getElementById('drawing-board__choice').style.display = 'none';
   document.getElementById('drawing-board__canvas').style.display = 'block';
   resizeCanvas();
-  setProgressBar(45, 'drawing-board__canvas-fill', () => {});
+  setProgressBar(45, 'drawing-board__canvas-fill', () => {
+    setTimeout(() => {
+      socket.emit('timeUp');
+    }, 3000);
+  });
 }
 
 socket.on('chooseWordOptions', (words) => {
@@ -329,8 +382,6 @@ socket.on('selectedWord', (word) => {
 
   // Thông báo cho người chơi khác là bắt đầu vẽ
   socket.broadcast.emit('otherPlayerDrawing');
-
-  io.emit('startGame'); // Giữ lại nếu cần cho UI hiển thị canvas
 });
 
 //Drawboard.js
@@ -369,7 +420,11 @@ function startDrawing() {
   // đảm bảo canvas có kích thước hợp lệ trước khi vẽ
   requestAnimationFrame(() => {
     resizeCanvas();
-    setProgressBar(45, 'drawing-board__canvas-fill', () => {}); //Thêm code code sau khi hêt thời gian vẽ làm gì tiếp theo trong hàm
+    setProgressBar(45, 'drawing-board__canvas-fill', () => {
+      setTimeout(() => {
+        socket.emit('timeUp');
+      }, 3000);
+    });
   });
 }
 
@@ -393,11 +448,24 @@ socket.on('updatePlayers', (players) => {
 
   sidebar.innerHTML = ''; // Xóa danh sách cũ
 
+  // Tìm người đang vẽ
+  const currentDrawer = players.find((p) => p.role === 'drawer');
+
+  // CHỈ cập nhật nếu chưa có tên drawer hoặc tên khác
+  if (
+    currentDrawer &&
+    (!currentDrawerName || currentDrawerName === 'Đang chờ...')
+  ) {
+    console.log('Found current drawer in updatePlayers:', currentDrawer.name);
+    currentDrawerName = currentDrawer.name;
+    updateCurrentDrawerName(currentDrawer.name);
+  }
+
+  // Render danh sách players
   players.forEach((p) => {
     const playerDiv = document.createElement('div');
     playerDiv.classList.add('player');
 
-    // Icon người vẽ
     const drawerIcon = p.role === 'drawer' ? '✏️ ' : '';
 
     playerDiv.innerHTML = `
@@ -425,6 +493,32 @@ socket.on('updatePlayers', (players) => {
 
     sidebar.appendChild(playerDiv);
   });
+});
+
+// Register Name Player
+function registerPlayer() {
+  const storedName = localStorage.getItem('playerName');
+  if (!storedName) {
+    window.location.href = '/';
+    return;
+  }
+
+  socket.emit('joinGame', storedName);
+}
+
+// Gửi đăng ký player khi mới kết nối
+socket.on('connect', () => {
+  console.log('Socket connected:', socket.id);
+  currentDrawerName = 'Đang chờ...';
+  updateCurrentDrawerName('Đang chờ...');
+  registerPlayer();
+});
+// Khi socket tự động reconnect lại sau mất kết nối
+socket.on('reconnect', (attemptNumber) => {
+  console.log('Socket reconnected after', attemptNumber, 'times');
+  currentDrawerName = 'Đang chờ...';
+  updateCurrentDrawerName('Đang chờ...');
+  registerPlayer();
 });
 
 window.onload = function () {
